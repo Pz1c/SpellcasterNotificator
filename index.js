@@ -4,6 +4,7 @@ var https = require('https');
 const express = require("express");
 const request = require("request");
 const bodyParser = require("body-parser");
+const site_parser = require("./game_modules/parser");
 
 // global constant 
 const c_max_check_delay = 5 * 60 * 1000; // 5 minutes between account check
@@ -81,7 +82,8 @@ function loadDBUsers() {
         console.log('loadDBData', 'load users', 'receive data', db_res.length);
         for (var i = 0; i < db_res.length; ++i) {
           garr_user[getObjectCode(db_res[i].user_id)] = {uid:db_res[i].user_id,fuid:db_res[i].facebook_uid,last_msg_date:db_res[i].last_msg_date,
-                                                              delay_level:db_res[i].delay_level,hint_show:db_res[i].hint_show,sleep:db_res[i].sleep};
+                                                              delay_level:db_res[i].delay_level,hint_show:db_res[i].hint_show,sleep:db_res[i].sleep,
+                                                              alert_battle_id:db_res[i].alert_battle_id};
           garr_fbuid[getObjectCode(db_res[i].facebook_uid, 'f')] = db_res[i].user_id;
           if (g_max_user_id < db_res[i].user_id) {
             g_max_user_id = db_res[i].user_id;
@@ -134,6 +136,7 @@ function loadDBListener() {
         console.log('loadDBData', 'load warlock listener', 'finish');
         
         checkWarlock();
+        var check_battle_interval = setInterval(checkBattles, c_max_check_delay);
       });
 }
 
@@ -340,6 +343,31 @@ function checkWarlock(not_in_cycle) {
 
 loadDBData();
 
+
+var max_battle_id = 0;
+function checkBattles() {
+  request('https://games.ravenblack.net/challenges', function (error, response, body) {
+    if (error) {
+      console.log('error[challenges]:', error); // Print the error if one occurred
+      return;
+    }
+    if (response && response.statusCode === 200) {
+      var challenges = site_parser.parseChallenges(body, max_battle_id);
+
+      for(var i = 0, Ln = challenges.length; i < Ln; ++i) {
+        max_battle_id = Math.max(max_battle_id, challenges[i].battle_id);
+        for(key in garr_user) {
+          if ((garr_user[key].alert_battle_id >= max_battle_id) || garr_user[key].sleep) {
+            continue;
+          }
+          garr_user[key].alert_battle_id = max_battle_id;
+          sendMessageToUser(garr_user[key], {text: battle.msg}, battle.battle_id);
+        }        
+      }
+    }
+  });
+}
+
 // WEB App
 
 var privateKey  = fs.readFileSync('./ssl/privkey.pem', 'utf8');
@@ -357,6 +385,7 @@ var httpsServer = https.createServer(credentials, app);
 
 httpServer.listen(4887);
 httpsServer.listen(4888);
+
 
 /*var app = express();
 app.use(bodyParser.urlencoded({extended: false}));
@@ -398,7 +427,7 @@ app.post("/webhook", function (req, res) {
     res.sendStatus(200);
 });
 
-function processPostback(event) {
+/*function processPostback(event) {
     var senderId = event.sender.id;
     var payload = event.postback.payload;
 
@@ -411,7 +440,7 @@ function processPostback(event) {
     } else if (payload === "Incorrect") {
         sendMessage(senderId, {text: "Oops!"});
     }
-}
+}*/
 
 function processMessageRead(event) {
   console.log('processMessageRead', JSON.stringify(event));
@@ -490,7 +519,8 @@ function addUser(user_id, fb_uid) {
 
 function updateUser(user) {
   console.log('updateUser', user);
-  mysql_db.query('update sn_user set last_msg_date = ?, delay_level = ?, sleep = ? where user_id = ?', [user.last_msg_date, user.delay_level, user.sleep, user.uid], 
+  mysql_db.query('update sn_user set last_msg_date = ?, delay_level = ?, sleep = ?, alert_battle_id = ?  where user_id = ?', 
+                 [user.last_msg_date, user.delay_level, user.sleep, user.alert_battle_id, user.uid],
     function (err, res) {
       if (err) {
         console.log('updateUser', user.last_msg_date, user.delay_level, user.uid, err.stack);
@@ -641,12 +671,16 @@ function checkUserDelay(user) {
   return (user.sleep === 0) && (lmt + delay <= ct); 
 }
 
-function sendMessageToUser(user, message) {
-    if (!checkUserDelay(user)) {
+function sendMessageToUser(user, message, alert_battle_id) {
+    if (!alert_battle_id && !checkUserDelay(user)) {
       return;
     }
-    user.last_msg_date = time();
-    ++user.delay_level;
+    if (alert_battle_id) {
+      user.alert_battle_id = alert_battle_id;
+    } else {
+      user.last_msg_date = time();
+      ++user.delay_level;
+    }
     updateUser(user);
     sendMessage(user.fuid, message);
 }

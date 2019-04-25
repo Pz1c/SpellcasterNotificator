@@ -6,6 +6,7 @@ CREATE TABLE sn_user
     delay_level int(3) DEFAULT 0,
     hint_show int(1) DEFAULT 0,
     sleep int(1) DEFAULT 0,
+    alert_battle_id int(10) unsigned not null default 0,
     
     primary key(user_id)
 );
