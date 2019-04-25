@@ -203,9 +203,10 @@ function alertWarlock(warlock_id, arr_battle_ids, last_activity_minutes) {
     /*for(var j = 0, Ln = arr_battle_ids.length; j < Ln; ++j) {
       str_battles += 'https://games.ravenblack.net/warlocks?num=' + arr_battle_ids[j] + '\n';
     }*/
+    var battle_txt = arr_battle_ids.length === 1 ? 'battle' : arr_battle_ids.length + ' battles';
     console.log('before sendMessageToUser', warlock.listener[i], getObjectCode(warlock.listener[i]), garr_user[getObjectCode(warlock.listener[i])]);
     sendMessageToUser(garr_user[getObjectCode(warlock.listener[i])], 
-                      {text: 'Warlock ' + warlock.login.toUpperCase() + ' has battle wait for orders!'+ str_battles
+                      {text: 'Warlock ' + warlock.login.toUpperCase() + ' have ' + battle_txt + ' wait for orders!'+ str_battles
                              //'https://games.ravenblack.net/player/' + warlock.login + '.html'
                              });
     /*
