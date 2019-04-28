@@ -137,6 +137,7 @@ function loadDBListener() {
         
         checkWarlock();
         var check_battle_interval = setInterval(checkBattles, c_max_check_delay);
+        checkBattles();
       });
 }
 
@@ -362,7 +363,7 @@ function checkBattles() {
             continue;
           }
           garr_user[key].alert_battle_id = max_battle_id;
-          sendMessageToUser(garr_user[key], {text: battle.msg}, battle.battle_id);
+          sendMessageToUser(garr_user[key], {text: challenges[i].msg}, challenges[i].battle_id);
         }        
       }
     }
