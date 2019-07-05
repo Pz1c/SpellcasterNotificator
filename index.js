@@ -105,7 +105,7 @@ function loadDBWarlocks() {
         
         console.log('loadDBData', 'load warlock', 'receive result');
         for (var i = 0; i < db_res.length; ++i) {
-          var fbids = db_res[i].finished_battles.length === 0 ? [] : db_res[i].finished_battles.split(',');
+          var fbids = (!db_res[i].finished_battles || (db_res[i].finished_battles.length === 0)) ? [] : db_res[i].finished_battles.split(',');
           garr_warlock[getObjectCode(db_res[i].warlock_id, 'w')] = {wid:db_res[i].warlock_id,login:db_res[i].login,listener:[],finished_battles:fbids};
           garr_warlock_id.push(db_res[i].warlock_id);
           if (g_max_warlock_id < db_res[i].warlock_id) {
@@ -380,7 +380,9 @@ function checkWarlockActivity(warlock_id, not_in_cycle) {
           console.log('checkWarlockActivity', 'response', warlock_login, c_find ? 'challenged to battles' : 'ready in battles');
           alertWarlock(warlock_id, parseReadyBattles(body), parseLastActivity(body), c_find, new_fb);
         }
-        storeFinishedBattles(warlock_id, finished_battles);
+        if (warlock_fb.length !== finished_battles.length) {
+          storeFinishedBattles(warlock_id, finished_battles);
+        }
       }
     } else {
       console.log('error['+warlock_login+']:', response);
