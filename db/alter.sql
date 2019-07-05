@@ -1,4 +1,4 @@
-alter table sn_user add
+alter table sn_warlock add
 (
-    alert_battle_id int(10) unsigned not null default 0
+    finished_battles varchar(1000)
 );

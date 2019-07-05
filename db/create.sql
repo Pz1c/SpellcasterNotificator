@@ -15,6 +15,7 @@ CREATE TABLE sn_warlock
 (
     warlock_id int(15) NOT NULL auto_increment,
     login varchar(250) NOT NULL,
+    finished_battles varchar(1000),
     
     primary key(warlock_id)
 );

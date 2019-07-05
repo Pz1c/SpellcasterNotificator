@@ -105,7 +105,8 @@ function loadDBWarlocks() {
         
         console.log('loadDBData', 'load warlock', 'receive result');
         for (var i = 0; i < db_res.length; ++i) {
-          garr_warlock[getObjectCode(db_res[i].warlock_id, 'w')] = {wid:db_res[i].warlock_id,login:db_res[i].login,listener:[]};
+          var fbids = db_res[i].finished_battles.length === 0 ? [] : db_res[i].finished_battles.split(',');
+          garr_warlock[getObjectCode(db_res[i].warlock_id, 'w')] = {wid:db_res[i].warlock_id,login:db_res[i].login,listener:[],finished_battles:fbids};
           garr_warlock_id.push(db_res[i].warlock_id);
           if (g_max_warlock_id < db_res[i].warlock_id) {
             g_max_warlock_id = db_res[i].warlock_id;
@@ -168,10 +169,35 @@ function prepareWarlockIndex() {
 }
 
 function removeWarlock(warlock_id) {
+  var warlock_code = getObjectCode(warlock_id, 'w');
+
+  if (garr_warlock[warlock_code]) {
+    delete garr_warlock[warlock_code];
+  }
+
+  var idx = garr_warlock_id.indexOf(warlock_id);
+  if (idx !== -1) {
+    garr_warlock_id.splice(idx, 1);
+  }
+
+  var sql1 = 'delete from sn_warlock_listener where warlock_id = ?';
+  mysql_db.query(sql1 , [warlock_id], function (err, db_res) {
+    if (err) {
+      console.log(sql1, warlock_id, err);
+      return;
+    }
+  });
   
+  var sql2 = 'delete from sn_warlock where warlock_id = ?';
+  mysql_db.query(sql2, [warlock_id], function (err, db_res) {
+    if (err) {
+      console.log(sql2, warlock_id, err);
+      return;
+    }
+  });
 }
 
-function alertWarlock(warlock_id, arr_battle_ids, last_activity_minutes) {
+function alertWarlock(warlock_id, arr_battle_ids, last_activity_minutes, challenges, new_finished_battles) {
   if (last_activity_minutes <= 2) {
     console.log('alertWarlock', warlock_id, last_activity_minutes, 'warlock looks active');
     return;
@@ -204,10 +230,23 @@ function alertWarlock(warlock_id, arr_battle_ids, last_activity_minutes) {
     /*for(var j = 0, Ln = arr_battle_ids.length; j < Ln; ++j) {
       str_battles += 'https://games.ravenblack.net/warlocks?num=' + arr_battle_ids[j] + '\n';
     }*/
-    var battle_txt = arr_battle_ids.length === 1 ? 'battle' : arr_battle_ids.length + ' battles';
+    var battle_txt = '';
+    if (challenges) {
+      // looks like we found challengs
+      battle_txt = 'challenges to battle';
+    } else if (arr_battle_ids.length > 0) {
+      battle_txt += arr_battle_ids.length === 1 ? 'battle' : arr_battle_ids.length + ' battles';
+      battle_txt += ' wait for orders!';
+    }
+    for(var i = 0, Ln = new_finished_battles.length; i < Ln; ++i) {
+      if (i === 0) {
+        battle_txt += '\nnew finished battles:';
+      }
+      battle_txt += 'https://games.ravenblack.net/warlocks?num=' + arr_battle_ids[j] + '&full=1\n';
+    }
     console.log('before sendMessageToUser', warlock.listener[i], getObjectCode(warlock.listener[i]), garr_user[getObjectCode(warlock.listener[i])]);
     sendMessageToUser(garr_user[getObjectCode(warlock.listener[i])], 
-                      {text: 'Warlock ' + warlock.login.toUpperCase() + ' have ' + battle_txt + ' wait for orders!'+ str_battles
+                      {text: 'Warlock ' + warlock.login.toUpperCase() + ' have ' + battle_txt// + str_battles
                              //'https://games.ravenblack.net/player/' + warlock.login + '.html'
                              });
     /*
@@ -247,22 +286,49 @@ function parseLastActivity(body) {
   return k * getInt(val);
 }
 
-function parseBattles(body) {
-  var res = [];
-  var idx1 = body.indexOf('Ready in battles');
-  var idx2 = body.indexOf('</TABLE></TD></TR>', idx1);
-  var idx3 = idx1;
-  while((idx3 = body.indexOf('HREF="/warlocks?num=', idx3)) != -1) {
-    idx3 += 20;
-    if (idx3 > idx2) {
-      break;
-    }
-    var idx4 = body.indexOf('"', idx3);
-    var battle_id = body.substr(idx3, idx4 - idx3);
-    res.push(battle_id);
+
+function parseBattles(Data, Search) {
+  var res_list = [];
+  var idx1 = Data.indexOf(Search);
+  if (idx1 === -1) {
+    return res_list;
+  }
+  idx1 += Search.length;
+  var idx2 = Data.indexOf("<TABLE", idx1);
+  if (idx2 == -1) {
+    return res_list;
+  }
+  idx2 += 7;
+  var idx3 = Data.indexOf("</TABLE", idx2);
+  if (idx3 == -1) {
+    return res_list;
+  }
+  var idx4 = idx2;
+  var battle_id;
+  while((idx4 = Data.indexOf("HREF=\"/warlocks?num=", idx4)) != -1 && idx4 < idx3) {
+      idx4 += 19;
+      battle_id = "";
+      while(++idx4 < idx3) {
+          var a = Data.substr(idx4, 1);
+          if ('0123456789'.indexOf(a) !== -1) {
+              battle_id += '' + a;
+          } else {
+              res_list.push(battle_id);
+              break;
+          }
+      }
   }
   
-  return res;
+  return res_list;
+}
+
+function parseReadyBattles(body) {
+  return parseBattles(body, 'Ready in battles:');
+  
+}
+
+function parseFinishedBattles(body) {
+  return parseBattles(body, 'Finished battles:');
 }
 
 function checkWarlockActivity(warlock_id, not_in_cycle) {
@@ -297,9 +363,24 @@ function checkWarlockActivity(warlock_id, not_in_cycle) {
       if (body.indexOf('No player by the name') != -1) {
         console.log('checkWarlockActivity', 'response', warlock_login, 'not found');
         removeWarlock(warlock_id);
-      } else if (body.indexOf('Ready in battles') != -1) {
-        console.log('checkWarlockActivity', 'response', warlock_login, 'ready in battles');
-        alertWarlock(warlock_id, parseBattles(body), parseLastActivity(body));
+      } else { 
+        var r_find = body.indexOf('Ready in battles') !== -1;
+        var c_find = body.indexOf('Challenged to battles') !== -1;
+        var warlock_fb = garr_warlock[getObjectCode(warlock_id, 'w')].finished_battles;
+        var finished_battles = parseFinishedBattles(body);
+        var new_fb = [];
+        if (warlock_fb.length > 0) {
+          for(var i = 0, Ln = finished_battles.length; i < Ln; ++i) {
+            if (warlock_fb.indexOf(finished_battles[i]) === -1) {
+              new_fb.push(finished_battles[i]);
+            }
+          }
+        }
+        if (r_find || c_find || (new_fb.length > 0)) {
+          console.log('checkWarlockActivity', 'response', warlock_login, c_find ? 'challenged to battles' : 'ready in battles');
+          alertWarlock(warlock_id, parseReadyBattles(body), parseLastActivity(body), c_find, new_fb);
+        }
+        storeFinishedBattles(warlock_id, finished_battles);
       }
     } else {
       console.log('error['+warlock_login+']:', response);
@@ -515,6 +596,18 @@ function addUser(user_id, fb_uid) {
         console.log('addUser', user_id, fb_uid, err.stack);
       } else {
         console.log('addUser', user_id, fb_uid, res[0]);
+      }
+    });
+}
+
+function storeFinishedBattles(warlock_id, finished_battles) {
+  console.log('storeFinishedBattles', warlock_id, finished_battles);
+  garr_warlock[getObjectCode(warlock_id, 'w')].finished_battles = finished_battles;
+  mysql_db.query('update sn_warlock set finished_battles = ?  where warlock_id = ?', 
+                 [finished_battles.join(','), warlock_id],
+    function (err, res) {
+      if (err) {
+        console.log('update sn_warlock set finished_battles = ?  where warlock_id = ?', warlock_id, finished_battles, err);
       }
     });
 }
