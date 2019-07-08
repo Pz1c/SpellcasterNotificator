@@ -242,7 +242,7 @@ function alertWarlock(warlock_id, arr_battle_ids, last_activity_minutes, challen
       if (i === 0) {
         battle_txt += '\nnew finished battles:';
       }
-      battle_txt += 'https://games.ravenblack.net/warlocks?num=' + arr_battle_ids[j] + '&full=1\n';
+      battle_txt += 'https://games.ravenblack.net/warlocks?num=' + new_finished_battles[i] + '&full=1\n';
     }
     console.log('before sendMessageToUser', warlock.listener[i], getObjectCode(warlock.listener[i]), garr_user[getObjectCode(warlock.listener[i])]);
     sendMessageToUser(garr_user[getObjectCode(warlock.listener[i])], 
