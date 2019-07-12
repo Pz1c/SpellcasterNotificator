@@ -556,7 +556,13 @@ function processMessage(event) {
   // You may get a text or attachment but not both
   if (message.text) {
       var arr = message.text.toLowerCase().trim().split(' ');
-      if (arr[0] === 'sleep') {
+      if (arr[0] === 'store') {
+        if ((arr.length < 2) || !isNaN(arr[1])) {
+          sendMessage(senderId, {text: 'Command STORE has following syntax "store battle_id" please add battle_id to your request'});
+          return;
+        }
+        archivateBattle(arr[1], senderId);
+      } else if (arr[0] === 'sleep') {
         garr_user[getObjectCode(user.uid)].sleep = 1;
         updateUser(garr_user[getObjectCode(user.uid)]);
         sendMessage(senderId, {text: 'Good night!\nAlert off\nType "wake" to switch on'});
@@ -580,7 +586,7 @@ function processMessage(event) {
         stopWatch(user.uid, arr[2]);
         sendMessage(senderId, {text: 'OK, you will not receive alert about ' + arr[1].toUpperCase() + ' battles'});
       } else if ((arr[0] === 'help') || (arr[0] === 'menu')) {
-        sendMessage(senderId, {text: 'Hi, I am Spellcaster Notificator, bot that alert you when your battle need action.\nFirst you should register on site https://games.ravenblack.net/newplayer and read game rules ;) https://games.ravenblack.net/rules/0/index.html\nOk now you can receive notification about battles that wait for your action\nJust type command "watch your_warlock_login" and alert appears in your messenger each time when battle ready\nAlso use command "sleep" and "wake" to switch off/on notifications'});
+        sendMessage(senderId, {text: 'Hi, I am Spellcaster Notificator, bot that alert you when your battle need action.\nFirst you should register on site https://games.ravenblack.net/newplayer and read game rules ;) https://games.ravenblack.net/rules/0/index.html\nOk now you can receive notification about battles that wait for your action\nJust type command "watch your_warlock_login" and alert appears in your messenger each time when battle ready\nAlso use command "sleep" and "wake" to switch off/on notifications\nNew command "store battle_id" wiil archivate you battle for history'});
       } else if (!user.hint_show) {
         sendMessage(senderId, {text: 'Sorry, I don\'t understand you request, try command "watch warlock_login" or help command or wait for human operator response (this message show only once, all another unknown commands will be sent to human operator)'});
         saveShowAlertToUser(user.uid);
@@ -588,6 +594,20 @@ function processMessage(event) {
   }/* else if (message.attachments) {
       sendMessage(senderId, {text: 'Sorry, I don\'t understand attachments, try command "watch warlock_login" or help or wait for human operator response'});
   }*/
+}
+
+function archivateBattle(battle_id, fb_uid) {
+  request('https://games.visk.in.ua/robot_gateway/wh/index.php?battle_id=' + battle_id, function (error, response, body) {
+    if (error) {
+      console.log('error[archivateBattle]:', error); // Print the error if one occurred
+      return;
+    }
+    if (response && response.statusCode === 200) {
+      sendMessage(fb_uid, {text: body});
+    } else {
+      sendMessage(fb_uid, {text: 'Sorry, request failed, please write post on Community page or try again later'});
+    }
+  });
 }
 
 function addUser(user_id, fb_uid) {
