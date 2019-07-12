@@ -238,11 +238,11 @@ function alertWarlock(warlock_id, arr_battle_ids, last_activity_minutes, challen
       battle_txt += arr_battle_ids.length === 1 ? 'battle' : arr_battle_ids.length + ' battles';
       battle_txt += ' wait for orders!';
     }
-    for(var i = 0, Ln = new_finished_battles.length; i < Ln; ++i) {
-      if (i === 0) {
+    for(var j = 0, LnJ = new_finished_battles.length; j < LnJ; ++j) {
+      if (j === 0) {
         battle_txt += '\nnew finished battles:';
       }
-      battle_txt += 'https://games.ravenblack.net/warlocks?num=' + new_finished_battles[i] + '&full=1\n';
+      battle_txt += 'https://games.ravenblack.net/warlocks?num=' + new_finished_battles[j] + '&full=1\n';
     }
     console.log('before sendMessageToUser', warlock.listener[i], getObjectCode(warlock.listener[i]), garr_user[getObjectCode(warlock.listener[i])]);
     sendMessageToUser(garr_user[getObjectCode(warlock.listener[i])], 
@@ -591,9 +591,7 @@ function processMessage(event) {
         sendMessage(senderId, {text: 'Sorry, I don\'t understand you request, try command "watch warlock_login" or help command or wait for human operator response (this message show only once, all another unknown commands will be sent to human operator)'});
         saveShowAlertToUser(user.uid);
       }
-  }/* else if (message.attachments) {
-      sendMessage(senderId, {text: 'Sorry, I don\'t understand attachments, try command "watch warlock_login" or help or wait for human operator response'});
-  }*/
+  }
 }
 
 function archivateBattle(battle_id, fb_uid) {
