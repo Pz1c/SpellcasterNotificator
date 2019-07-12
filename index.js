@@ -557,7 +557,7 @@ function processMessage(event) {
   if (message.text) {
       var arr = message.text.toLowerCase().trim().split(' ');
       if (arr[0] === 'store') {
-        if ((arr.length < 2) || !isNaN(arr[1])) {
+        if ((arr.length < 2) || isNaN(arr[1])) {
           sendMessage(senderId, {text: 'Command STORE has following syntax "store battle_id" please add battle_id to your request'});
           return;
         }
