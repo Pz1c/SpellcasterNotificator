@@ -369,6 +369,9 @@ function checkWarlockActivity(warlock_id, not_in_cycle) {
         var warlock_fb = garr_warlock[getObjectCode(warlock_id, 'w')].finished_battles;
         var finished_battles = parseFinishedBattles(body);
         var new_fb = [];
+        if (!warlock_fb || !warlock_fb.length) {
+          warlock_fb = [];
+        }
         if (warlock_fb.length > 0) {
           for(var i = 0, Ln = finished_battles.length; i < Ln; ++i) {
             if (warlock_fb.indexOf(finished_battles[i]) === -1) {
@@ -813,7 +816,7 @@ function sendMessage(recipientId, message) {
         }
     }, function(error, response, body) {
         if (error) {
-            console.log("Error sending message: " + response.error);
+            console.log("Error sending message: " + error);
         }
         console.log('sendMessage', body);
     });
