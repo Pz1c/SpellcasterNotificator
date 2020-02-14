@@ -5,18 +5,18 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node index.js localhost db_castle_user T9EdT8t5QsKyBb88 castledb"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SteelProgramming/SpellcasterNotificator.git"
+    "url": "git+https://github.com/Pz1C/SpellcasterNotificator.git"
   },
   "author": "Galbarad",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/SteelProgramming/SpellcasterNotificator/issues"
+    "url": "https://github.com/Pz1C/SpellcasterNotificator/issues"
   },
-  "homepage": "https://github.com/SteelProgramming/SpellcasterNotificator#readme",
+  "homepage": "https://github.com/Pz1C/SpellcasterNotificator#readme",
   "dependencies": {
     "body-parser": "^1.18.2",
     "express": "^4.16.2",
