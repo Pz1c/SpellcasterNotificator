@@ -813,6 +813,8 @@ function sendMessage(recipientId, message) {
         json: {
             recipient: {id: recipientId},
             message: message,
+            messaging_type: "MESSAGE_TAG",
+            tag: "CONFIRMED_EVENT_UPDATE"
         }
     }, function(error, response, body) {
         if (error) {
